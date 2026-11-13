@@ -1,0 +1,39 @@
+name: Movieland Realtime Tracker
+
+on:
+  schedule:
+    # 매시간 정각마다 자동 실행 (30분마다 원하면 '0,30 * * * *'로 수정)
+    - cron: '0 * * * *'
+  workflow_dispatch: # 수동 즉시 실행 버튼 활성화
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas playwright
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run scraper
+        run: python scraper.py
+
+      - name: Save CSV results
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add movieland_realtime_stats.csv movieland_latest_summary.csv
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update movieland stats"
+          git push
