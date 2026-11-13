@@ -147,13 +147,11 @@ async def main():
 
     df_now = pd.DataFrame(all_records)
 
-    # 1) 전체 회차별 히스토리 누적 저장
     if os.path.exists(CSV_FILE):
         df_now.to_csv(CSV_FILE, mode="a", header=False, index=False, encoding="utf-8-sig")
     else:
         df_now.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
 
-    # 2) 최신 요약 리포트 저장 (모바일에서 바로 표로 확인하기 좋게 정리)
     today_start = now_dt.replace(hour=0, minute=0, second=0, microsecond=0)
     cutoff_date = today_start + timedelta(days=SHORT_TERM_DAYS)
     df_now["parsed_date"] = df_now["상영일"].apply(lambda x: parse_show_date(x, now_dt))
@@ -188,46 +186,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-3단계: 자동 스케줄 설정 파일 올리기 (.github/workflows/run.yml)
-1. 다시 Add file → Create new file을 누릅니다.
-2. 파일 이름 칸에 .github/workflows/run.yml이라고 정확히 입력합니다. (슬래시 /를 치면 자동으로 폴더가 만들어집니다.)
-3. 아래 내용을 그대로 복사해 넣고 Commit changes를 누릅니다.
-name: Movieland Realtime Tracker
-
-on:
-  schedule:
-    # 매시간 정각마다 자동 실행 (30분마다 원하면 '0,30 * * * *'로 수정)
-    - cron: '0 * * * *'
-  workflow_dispatch: # 수동 즉시 실행 버튼 활성화
-
-permissions:
-  contents: write
-
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install pandas playwright
-          playwright install chromium
-          playwright install-deps chromium
-
-      - name: Run scraper
-        run: python scraper.py
-
-      - name: Save CSV results
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add movieland_realtime_stats.csv movieland_latest_summary.csv
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update movieland stats"
-          git push
